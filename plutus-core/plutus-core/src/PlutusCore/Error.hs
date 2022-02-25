@@ -41,6 +41,7 @@ import Control.Lens hiding (use)
 import Control.Monad.Error.Lens
 import Control.Monad.Except
 import Data.List.NonEmpty qualified as NE (head)
+import Data.Set (singleton)
 import Data.Set qualified as Set
 import Data.Text qualified as T
 import ErrorCode
@@ -112,8 +113,24 @@ data Error uni fun ann
 makeClassyPrisms ''Error
 deriving stock instance (Show fun, Show ann, Closed uni, Everywhere uni Show, GShow uni, Show ParserError) => Show (Error uni fun ann)
 
--- instance AsParserError (Error uni fun ann) where
---     _ParserError = _ParseErrorE
+
+instance AsParserError (Error uni fun ann) where
+-- Construct a simple prism of Prism' (Error uni fun ann) ParserError with
+-- prism' :: (a -> s) -> (s -> Maybe a) -> Prism' s a
+    _ParserError = prism' putParserErr takeParserErr
+
+-- This may not be the right direction because we are losing a lot of info
+putParserErr :: ParserError -> Error uni fun ann
+putParserErr err =
+    ParseErrorE
+        (ParseErrorBundle
+            (FancyError 0 (singleton (ErrorCustom err)) :| [])
+            (PosState "" 0 (initialPos "test") (mkPos 0) "")
+        )
+
+takeParserErr :: Error uni fun ann -> Maybe ParserError
+takeParserErr (ParseErrorE (ParseErrorBundle (NE.head -> (FancyError _ (Set.findMin -> (ErrorCustom e)))) _)) = Just e
+takeParserErr _                                                                                               = Nothing
 
 instance AsUniqueError (Error uni fun ann) ann where
     _UniqueError = _UniqueCoherencyErrorE
