@@ -95,6 +95,8 @@ test-suite plutus-ledger-api-test
         plutus-core -any,
         plutus-core:plutus-core-testlib -any,
         plutus-ledger-api -any,
+        plutus-tx-plugin -any,
+        plutus-tx -any,
         hedgehog -any,
         tasty -any,
         tasty-hedgehog -any,
