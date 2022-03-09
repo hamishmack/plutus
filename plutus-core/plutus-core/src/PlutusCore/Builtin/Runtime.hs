@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns   #-}
 {-# LANGUAGE RankNTypes     #-}
 {-# LANGUAGE TypeFamilies   #-}
 
@@ -88,7 +89,7 @@ unliftMode = UnliftWhenSaturated
 -- | Instantiate a 'BuiltinMeaning' given denotations of built-in functions and a cost model.
 toBuiltinRuntime :: cost -> BuiltinMeaning val cost -> BuiltinRuntime val
 toBuiltinRuntime cost (BuiltinMeaning sch f exF) =
-    go sch $ \sch' toF' toExF' -> (BuiltinRuntime sch' $! (toF' $ pure f)) $! (toExF' $ exF cost) where
+    go sch $ \sch' toF' toExF' -> BuiltinRuntime sch' (toF' $ pure f) (toExF' $ exF cost) where
         go
             :: TypeScheme val args res
             -> (forall n.
@@ -106,7 +107,7 @@ toBuiltinRuntime cost (BuiltinMeaning sch f exF) =
             go schB $ \sch' toF' toExF' -> k
                 (RuntimeSchemeArrow sch')
                 (\getF x -> do
-                    let getVal = readKnown (Just ()) x
+                    let !getVal = readKnown (Just ()) x
                     case unliftMode of
                         UnliftImmediately   -> getVal <&> \val -> toF' (($ val) <$> getF)
                         UnliftWhenSaturated -> pure . toF' $ getF <*> getVal)
